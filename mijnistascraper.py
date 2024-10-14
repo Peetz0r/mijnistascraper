@@ -1,6 +1,6 @@
 #!/bin/python3
 
-import bs4, requests, configparser, pprint, datetime, time
+import bs4, requests, configparser, datetime
 
 config = configparser.ConfigParser()
 config.read("config.ini")
@@ -26,10 +26,13 @@ endDate = datetime.datetime.strptime(userValues['Cus'][0]['curConsumption']['Cur
 
 print("endDate:\t", endDate)
 
-for i in range(7):
-  # +1 because data from endDate itself is still unavailable
-  date = endDate - datetime.timedelta(days=i+1)
+endDate = datetime.date.today()
 
+print("endDate:\t", endDate)
+
+
+def doThing(date):
+  global jwt
   r = session.post("https://mijn.ista.nl/api/Values/ConsumptionValues", json={
     "JWT": jwt,
     "Cuid": userValues['Cus'][0]['Cuid'],
@@ -42,14 +45,14 @@ for i in range(7):
   todaysValues = r.json()
   jwt = todaysValues['JWT']
 
-  print(date, end=' ')
-  for i in todaysValues['ServicesComp'][0]['CurMeters']:
-    print(i['CValue'], end=' ')
+  data = todaysValues['ServicesComp'][0]['CurMeters']
+
+  print(f'[{date:%Y-%m-%d}]', end='      ')
+  for meter in data:
+    print(f'''[{f"{meter['MeterNr']:,}".replace(',',' ')} | {f"{meter['MeterId']}"}]  {meter['Position']:12s}  CV: {meter['CValue']:4.0f}  CCV: {meter['CCValue']:4.0f}  Begin: {meter['BeginValue']:4.0f}  End: {meter['EndValue']:4.0f}''', end='      ')
   print()
 
-data = todaysValues['ServicesComp'][0]['CurMeters']
+for i in range(28):
+  date = endDate - datetime.timedelta(days=i)
+  doThing(date)
 
-print(f"╭{'─'*18}┬{'─'*14}┬{'─'*14}╮")
-for i in data[0]:
-  print(f"│ {i:>16} │ {data[0][i]!s:12} │ {data[1][i]!s:12} │")
-print(f"╰{'─'*18}┴{'─'*14}┴{'─'*14}╯")
