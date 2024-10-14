@@ -7,15 +7,23 @@ config.read("config.ini")
 
 session = requests.Session()
 
-r = session.get("https://mijn.ista.nl/")
+r = session.get("https://mijn.ista.nl/home/index")
 s = bs4.BeautifulSoup(r.text, features="html.parser")
-loginRequestVerificationToken = s.find("form", {"id": "account"}).find("input", {"name": "__RequestVerificationToken"})["value"]
+formAction = s.form['action']
 
-r = session.post("https://mijn.ista.nl/Identity/Account/Login", data={
-    "txtUserName": config["account"]["user"],
-    "txtPassword": config["account"]["pass"],
-    "__RequestVerificationToken": loginRequestVerificationToken
-  }, params={"ReturnUrl": "/"})
+r = session.post(formAction, data={"username": config["account"]["user"]})
+s = bs4.BeautifulSoup(r.text, features="html.parser")
+formAction = s.form['action']
+
+r = session.post(formAction, data={"password": config["account"]["pass"]})
+s = bs4.BeautifulSoup(r.text, features="html.parser")
+formAction = s.form['action']
+
+data = {}
+for i in s.find_all('input'):
+  data[i['name']] = i['value']
+
+r = session.post(formAction, data=data)
 s = bs4.BeautifulSoup(r.text, features="html.parser")
 jwt = s.find("input", {"id": "__twj_"})["value"]
 
